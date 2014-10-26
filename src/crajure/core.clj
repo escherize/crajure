@@ -3,15 +3,6 @@
             [net.cgrand.enlive-html :as html]
             [crajure.util :as u]))
 
-(defonce areas
-  (->> (html/select
-        (u/fetch-url "https://www.craigslist.org/about/sites")
-        [:li :> :a])
-       (map (comp :href :attrs))
-       (map #(-> (re-find #"\/\/([a-z]*)" %) second))
-       distinct
-       (filter #(u/has-page? (str "http://" % ".craigslist.org")))
-       sort))
 
 (defn query+area->url [area section query-str]
   (format "http://%s.craigslist.org/search/%s?s=__PAGE_NUM__&query=%s&sort=pricedsc"
@@ -38,9 +29,46 @@
   (->> (html/select page [:.price])
        (map (comp u/dollar-str->int first :content))))
 
-(def page->titles [page]
+(defn page->titles [page]
   (->> (html/select page [:span.pl :a])
        (map (comp first :content))))
+
+(defn page->dates [page]
+  (->> (html/select page [:time])
+       (map (comp :datetime :attrs))))
+
+(defn page->item-urls [page area]
+  (->> (html/select page [:span.pl :a])
+       (map (comp :href :attrs))
+       (map (fn [u] (str "http://" area
+                         ".craigslist.org" u)))))
+
+(defn page->regions [page]
+  (->> (html/select page [:span.pnr :small])
+       (map (comp str/trim first :content))
+       (map (fn [s] (apply str (drop-last (rest s)))))))
+
+(defn page->categories [page]
+  (->> ( html/select page [:span.l2 :a.gc])
+       (map (comp first :content))))
+
+(defn ->item-map [area price title date item-url region category]
+  {:price price
+   :title title
+   :date date
+   :region region
+   :item-url item-url
+   :category category})
+
+(defn page+area->item-map [page area]
+  (map ->item-map
+       (repeat area)
+       (page->prices page)
+       (page->titles page)
+       (page->dates page)
+       (page->item-urls page area)
+       (page->regions page)
+       (page->categories page)))
 
 (defn cl-item-seq [area section query-str]
   (let [page-count (get-num-pages query-str section area)
@@ -48,30 +76,8 @@
     (->
      (for [page-name page-range]
        (let [url (query+area->url area section query-str)
-             page (u/fetch-url url)
-             prices (page->prices page)
-             titles (page->titles page)
-             dates (->> (html/select page [:time])
-                        (map (comp :datetime :attrs)))
-             item-urls (->> (html/select page [:span.pl :a])
-                            (map (comp :href :attrs))
-                            (map (fn [u] (str "http://" area
-                                              ".craigslist.org" u))))
-             regions (->> (html/select page [:span.pnr :small])
-                          (map (comp str/trim
-                                     first
-                                     :content))
-                          (map (fn [s] (apply str (drop-last (rest s))))))
-             categories (->> ( html/select page [:span.l2 :a.gc])
-                             (map (comp first :content)))]
-         (map (fn [area price title date region item-url category]
-                {:price price
-                 :title title
-                 :date date
-                 :region region
-                 :item-url item-url
-                 :category category})
-              (repeat area) prices titles dates regions item-urls categories)))
+             page (u/fetch-url url)]
+         (page+area->item-map page area)))
      concat
      first)))
 
@@ -100,6 +106,4 @@
   (let [terms (search-str->query-str query)
         section-key (get-section-code section)
         items (cl-item-seq area section-key terms)]
-    {:items items
-     :area area
-     :section section}))
+    items))
