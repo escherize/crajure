@@ -1,20 +1,16 @@
 (ns crajure.core
   (:require [clojure.string :as str]
             [net.cgrand.enlive-html :as html]
-            [clojure.string :as str]))
-
-(defn has-page? [url]
-  (boolean
-   (fetch-url url)))
+            [crajure.util :as u]))
 
 (defonce areas
   (->> (html/select
-        (fetch-url "https://www.craigslist.org/about/sites")
+        (u/fetch-url "https://www.craigslist.org/about/sites")
         [:li :> :a])
        (map (comp :href :attrs))
        (map #(-> (re-find #"\/\/([a-z]*)" %) second))
        distinct
-       (filter #(has-page? (str "http://" % ".craigslist.org")))
+       (filter #(u/has-page? (str "http://" % ".craigslist.org")))
        sort))
 
 (defn query+area->url [area section query-str]
@@ -27,10 +23,10 @@
 (defn item-count->page-count [num-selected-string]
   (-> num-selected-string read-string (/ 100) int inc))
 
-(defn get-num-hits [query-str section area]
+(defn get-num-pages [query-str section area]
   (let [url (-> (query+area->url area section query-str)
                 (str/replace "s=__PAGE_NUM__&" ""))
-        page (fetch-url url)
+        page (u/fetch-url url)
         num-selected-large (-> (html/select page [:a.totalcount])
                                first :content first)
         num-selected (or num-selected-large
@@ -38,25 +34,23 @@
                              html/texts first (str/split #" ") last))]
     (item-count->page-count num-selected)))
 
-(defn dollar-str->int [x-dollars]
-  (try (->> x-dollars
-            rest
-            (apply str)
-            read-string)
-       (catch Exception e (str "dollar-str->int got: "
-                               x-dollars ", not a dollar amount."))))
+(defn page->prices [page]
+  (->> (html/select page [:.price])
+       (map (comp u/dollar-str->int first :content))))
+
+(def page->titles [page]
+  (->> (html/select page [:span.pl :a])
+       (map (comp first :content))))
 
 (defn cl-item-seq [area section query-str]
-  (let [page-count (get-num-hits query-str section area)
+  (let [page-count (get-num-pages query-str section area)
         page-range (map #(-> % (* 100) str) (range 0 page-count))]
     (->
      (for [page-name page-range]
        (let [url (query+area->url area section query-str)
-             page (fetch-url url)
-             prices (->> (html/select page [:.price])
-                         (map (comp dollar-str->int first :content)))
-             titles (->> (html/select page [:span.pl :a])
-                         (map (comp first :content)))
+             page (u/fetch-url url)
+             prices (page->prices page)
+             titles (page->titles page)
              dates (->> (html/select page [:time])
                         (map (comp :datetime :attrs)))
              item-urls (->> (html/select page [:span.pl :a])
@@ -64,7 +58,9 @@
                             (map (fn [u] (str "http://" area
                                               ".craigslist.org" u))))
              regions (->> (html/select page [:span.pnr :small])
-                          (map (comp str/trim first :content))
+                          (map (comp str/trim
+                                     first
+                                     :content))
                           (map (fn [s] (apply str (drop-last (rest s))))))
              categories (->> ( html/select page [:span.l2 :a.gc])
                              (map (comp first :content)))]
@@ -107,10 +103,3 @@
     {:items items
      :area area
      :section section}))
-
-(defn round-to-nearest [to from]
-  (let [add (/ to 2)
-        divd (int (/ (+ add from) to))]
-    (* divd to)))
-
-
