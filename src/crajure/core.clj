@@ -128,13 +128,6 @@
     (throw (Exception. (str "Invalid Area Code, " area-key)))))
 
 (defn query-cl
-  [{:keys [query area section] :as query-map}]
-  (let [terms (search-str->query-str query)
-        section-key (get-section-code section)
-        items (cl-item-seq area section-key terms)]
-    items))
-
-(defn qcl
   "where query map contains a map of
   :query - a string like \"fixie bikes\"
   :area - a keyword like :sfbay that is an official cl area
