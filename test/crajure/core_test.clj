@@ -13,4 +13,15 @@
     (let [query-result (get-pages)
           keys-in-result (->> query-result (map keys) set)]
       (is (= #{[:price :title :date :region :item-url :category]}
-             keys-in-result)))))
+             keys-in-result))))
+  (testing "no results returns empty seq"
+    (let [no-results (query-cl
+                      {:query (str (java.util.UUID/randomUUID))
+                                        ; noone searches for a uuid.
+                       :area "sfbay"
+                       :section :for-sale})]
+      (is (= no-results nil)))))
+
+(count (query-cl {:query "bike fixie red"
+                  :area "sfbay"
+                  :section :for-sale}))
