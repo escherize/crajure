@@ -8,6 +8,9 @@
                :area "sfbay"
                :section :for-sale})))
 
+(defn unsearchable-string []
+  (str (repeat 10 (java.util.UUID/randomUUID))))
+
 (deftest cl-query-works
   (testing "all maps recieved from query-result are identical and listed."
     (let [query-result (get-pages)
@@ -15,13 +18,5 @@
       (is (= #{[:price :title :date :region :item-url :category]}
              keys-in-result))))
   (testing "no results returns empty seq"
-    (let [no-results (query-cl
-                      {:query (str (java.util.UUID/randomUUID))
-                                        ; noone searches for a uuid.
-                       :area "sfbay"
-                       :section :for-sale})]
-      (is (= no-results nil)))))
-
-(count (query-cl {:query "bike fixie red"
-                  :area "sfbay"
-                  :section :for-sale}))
+    (let [empty-results (query-cl (unsearchable-string) "sfbay" :for-sale)]
+      (is (empty? empty-results)))))

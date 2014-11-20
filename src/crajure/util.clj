@@ -38,8 +38,8 @@
 
 (defn ->flat-seq
   [x]
-  (flatten 
-   (if (seq? x) 
-     (vec x) 
+  (flatten
+   (if (seq? x)
+     (vec x)
      (vector x))))
 

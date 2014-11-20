@@ -105,15 +105,15 @@
 
 (def section-map
   {:community "ccc"
-   :events "eee"
-   :for-sale "sss"
-   :gigs "ggg"
-   :housing "hhh"
-   :jobs "jjj"
+   :events    "eee"
+   :for-sale  "sss"
+   :gigs      "ggg"
+   :housing   "hhh"
+   :jobs      "jjj"
    :personals "ppp"
-   :resumes "rrr"
-   :services "bbb"
-   :all ["ppp" "ccc" "eee" "hhh" "sss" "rrr" "jjj" "ggg" "bbb"]})
+   :resumes   "rrr"
+   :services  "bbb"
+   :all       ["ppp" "ccc" "eee" "hhh" "sss" "rrr" "jjj" "ggg" "bbb"]})
 
 (defn get-section-code
   [section-key]
@@ -123,7 +123,7 @@
 
 (defn get-area-code
   [area-key]
-  (if-let [code (get (a/area-map) area-key)]
+  (if-let [code (get (a/area-map) (keyword area-key))]
     code
     (throw (Exception. (str "Invalid Area Code, " area-key)))))
 
@@ -135,13 +135,14 @@
   :section - a key representing a section of cl, i.e. :for-sale
   ;;         btw, can use :all for every section.
   "
-  [{:keys [query area section]}]
-  (let [terms (search-str->query-str query)
-        section-seq (u/->flat-seq
-                     (get-section-code section))
-        area-seq (u/->flat-seq
-                  (get-area-code area))]
-    (apply concat
-           (for [a area-seq
-                 s section-seq]
-             (cl-item-seq a s terms)))))
+  ([query area section]
+     (query-cl {:query query :area area :section section}))
+  ([{:keys [query area section]}]
+     (let [terms (search-str->query-str query)
+           section-seq (u/->flat-seq (get-section-code section))
+           area-seq (u/->flat-seq (get-area-code area))]
+       (or (apply concat
+                  (for [a area-seq
+                        s section-seq]
+                    (cl-item-seq a s terms)))
+           []))))
