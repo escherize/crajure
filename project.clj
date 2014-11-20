@@ -1,4 +1,4 @@
-(defproject crajure "0.1.0-SNAPSHOT"
+(defproject crajure "0.1.0"
   :description "FIXME: write description"
   :url "http://www.github.com/escherize/crajure"
   :license {:name "Eclipse Public License"
