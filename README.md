@@ -1,21 +1,21 @@
 crajure
 =======
 
-Craigslist-as-a-backend for clojure.
+Very Easy Craigslist Scraping for Clojure.
+----
 
-This project is the read half of a full craigslist Library.
-
-We're using it for data vis, among other things.
+We've been using it for data vis, BI, and some other things.
 
 [![Clojars Project](http://clojars.org/crajure/latest-version.svg)](http://clojars.org/crajure)
 
 usage
 ---
-To search for fixie bikes in san francisco, simply supply the space delimited query string, area code (i.e. "sfbay").
+To search for fixie bikes in san francisco, simply supply the space delimited query string, area code (i.e. :sfbay), and site section (i.e. :for-sale); like so:
 
 ```{clojure}
 (query-cl "fixie bike" :sfbay :for-sale)
-;=> ({:price 2500,
+;=> 
+   ({:price 2500,
      :title "2013 Giant Glory 2 Medium *price drop*",
      :date "2014-10-22 21:20",
      :region "morgan hill",
@@ -28,8 +28,6 @@ To search for fixie bikes in san francisco, simply supply the space delimited qu
      :item-url "http://sfbay.craigslist.org/sby/bik/4681252594.html",
      :category "bicycles - by owner"} ...)
 ```
-
-
 
 Also, one may call query-cl with a map like so:
 
@@ -50,4 +48,13 @@ Also, one may call query-cl with a map like so:
      :item-url "http://sfbay.craigslist.org/sby/bik/4681252594.html",
      :category "bicycles - by owner"} ...)
 ```
+
+Why Crajure?
+----
+One interesting benefit to using this library is we can query craigslist for the entire earth using `:all` as the area-code.  We can also look at every section of the site with one query just the same way, by using `:all` in the site-section field.  These queries can hit thousands of webpages so of course it's not exactly reccomended when online speed is nessicary.
+```{clojure}
+(query-cl "bicycle" :all :all)
+;=>  lots of maps.
+```
+
 
